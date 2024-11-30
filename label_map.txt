@@ -1,1 +1,2 @@
 joseph:0
+shakti:1

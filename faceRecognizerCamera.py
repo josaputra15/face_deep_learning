@@ -1,13 +1,16 @@
 import cv2
 import os
 import numpy as np
+import dlib
 
 # Global variables
 face_cascade = cv2.CascadeClassifier("face_algortim_frontal_opencv.xml")
 recognizer = cv2.face.LBPHFaceRecognizer_create()
 camera = cv2.VideoCapture(0)
+landmark_predictor = dlib.shape_predictor("biometric_dots.dat")
 
-# 1 Capture Images for Training
+
+# 1: Capture
 def capture_images(name):
     if not os.path.exists("training_data"):
         os.makedirs("training_data")
@@ -19,7 +22,7 @@ def capture_images(name):
             break
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
+        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=7, minSize=(100, 100))
 
         for x, y, w, h in faces:
             count += 1
@@ -30,14 +33,14 @@ def capture_images(name):
 
         cv2.imshow("Capturing Images", frame)
 
-        if cv2.waitKey(1) & 0xFF == ord('q') or count >= 20:  # Capture 20 images or quit with 'q'
+        if cv2.waitKey(1) & 0xFF == ord('q') or count >= 100:  
             break
 
     print(f"Captured {count} images for {name}")
     camera.release()
     cv2.destroyAllWindows()
 
-# 2 Train the Recognizer
+#2: Train
 def train_recognizer():
     faces = []
     labels = []
@@ -68,8 +71,8 @@ def train_recognizer():
 
     print("Training completed. Model saved.")
 
-# Step 3: Real-Time Recognition
-def recognizer_box(frame):
+# 3:Recognitions
+def recognizer_box_with_landmarks(frame):
     if not os.path.exists("face_recognizer.yml") or not os.path.exists("label_map.txt"):
         print("No trained model found. Please train the recognizer first!")
         return
@@ -82,40 +85,55 @@ def recognizer_box(frame):
     faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
 
     for x, y, w, h in faces:
+        if w < 50 or h < 50: 
+            continue
+
         face = gray_frame[y:y+h, x:x+w]
+        face = cv2.equalizeHist(face)
+
         label, confidence = recognizer.predict(face)
 
-        if confidence < 100:  # Confidence threshold
-            name = label_map[label]
-        else:
+        if confidence > 50: 
             name = "Unknown"
+        else:
+            name = label_map[label]
 
-        # Draw rectangle and display name
+        # boundingbox display
         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
-        cv2.putText(frame, name, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        cv2.putText(frame, f"{name} ({confidence:.2f})", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
-# Main Method for Real-Time Recognition
+        
+        rect = dlib.rectangle(x, y, x + w, y + h)
+        landmarks = landmark_predictor(gray_frame, rect)
+
+        #biometric
+        for i in range(68):
+            point = (landmarks.part(i).x, landmarks.part(i).y)
+            cv2.circle(frame, point, 2, (0, 255, 255), -1)
+
+# Main
 def main():
     while True:
         ret, frame = camera.read()
         if not ret:
             break
 
-        recognizer_box(frame)
-        cv2.imshow("Recognizer", frame)
+        recognizer_box_with_landmarks(frame)
+        cv2.imshow("Recognizer with Biometric Dots", frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+            camera.release()
+            cv2.destroyAllWindows()
 
-    camera.release()
-    cv2.destroyAllWindows()
+    # camera.release()
+    # cv2.destroyAllWindows()
 
 # Unified Entry Point
 if __name__ == "__main__":
     print("Choose an option:")
     print("1: Capture Images")
     print("2: Train Recognizer")
-    print("3: Real-Time Recognition")
+    print("3: Real-Time Recognition with Biometric Dots")
 
     choice = input("Enter your choice (1/2/3): ")
 
