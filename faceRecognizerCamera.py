@@ -22,7 +22,7 @@ def capture_images(name):
             break
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=7, minSize=(100, 100))
+        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=3, minSize=(75, 75))
 
         for x, y, w, h in faces:
             count += 1
@@ -82,7 +82,7 @@ def recognizer_box_with_landmarks(frame):
         label_map = {int(line.split(":")[1]): line.split(":")[0] for line in f.readlines()}
 
     gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
+    faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=3, minSize=(75, 75))
 
     for x, y, w, h in faces:
         if w < 50 or h < 50: 
@@ -119,15 +119,13 @@ def main():
             break
 
         recognizer_box_with_landmarks(frame)
-        cv2.imshow("Recognizer with Biometric Dots", frame)
+        cv2.imshow("Biometric", frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             camera.release()
             cv2.destroyAllWindows()
 
-    # camera.release()
-    # cv2.destroyAllWindows()
-
+   
 # Unified Entry Point
 if __name__ == "__main__":
     print("Choose an option:")
@@ -146,3 +144,34 @@ if __name__ == "__main__":
         main()
     else:
         print("Invalid choice. Exiting...")
+
+
+
+
+
+
+
+# In capture_images:
+# faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=7, minSize=(100, 100))
+# In recognizer_box_with_landmarks:
+# faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
+
+# Parameters Affecting Detection Range:
+# scaleFactor: Controls how much the image size is reduced at each image scale.
+# A smaller value (e.g., 1.05) results in a finer scale reduction and can detect smaller faces at farther distances, but it increases processing time.
+# A larger value (e.g., 1.2) makes the detector faster but may miss smaller or farther faces.
+# minNeighbors: Specifies how many neighbors each candidate rectangle should have to retain it.
+# A lower value detects more faces (including false positives).
+# A higher value detects fewer but more reliable faces.
+# minSize: Sets the minimum size of the detected face (width, height).
+# Increasing minSize restricts detection to closer faces or those of a larger size.
+# Decreasing minSize allows detection of smaller or more distant faces.
+# Adjusting for Farther Detection:
+# To extend the detection range:
+
+# Decrease scaleFactor (e.g., 1.05).
+# Lower minNeighbors (e.g., 3 or 4).
+# Reduce minSize (e.g., (50, 50)).
+# Example Adjustment:
+# faces = face_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=4, minSize=(50, 50))
+# This configuration increases sensitivity, allowing the bounding box to detect smaller and farther faces but might increase false positives or processing time.
